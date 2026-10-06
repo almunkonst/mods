@@ -1,6 +1,6 @@
 {
   "name": "cache-keeper",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Band with cache warmth, context size, limits, last-turn tokens and Cyrillic share; /handoff saves a session note, 'clear and continue' resumes from it.",
   "types": "./types/index.d.ts",
   "userConfig": {
@@ -15,6 +15,12 @@
       "title": "Hint at context %",
       "description": "With a cold cache, suggest a handoff from this share of the window.",
       "default": 60
+    },
+    "soonMinutes": {
+      "type": "number",
+      "title": "Warn before the cache cools (minutes)",
+      "description": "This many minutes before the cache goes cold, suggest saving a handoff while it is still cheap.",
+      "default": 10
     },
     "urgentPercent": {
       "type": "number",

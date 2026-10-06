@@ -5,6 +5,15 @@ export const HANDOFF_PROMPT = [
   'Reply with the note only.',
 ].join(' ')
 
+// Если человек пишет по-русски, записка тоже по-русски. Заголовки разделов остаются английскими:
+// по «Pick up here» parseNext находит шаги для кнопок 1–3.
+export const RU_THRESHOLD = 50
+
+export const handoffPrompt = (ruShare: number): string =>
+  ruShare >= RU_THRESHOLD
+    ? `${HANDOFF_PROMPT} Keep the four section titles exactly as written above, in English; write everything under them in Russian.`
+    : HANDOFF_PROMPT
+
 export const warmMinutes = (lastAt: number, now: number, ttl: number): number | null =>
   lastAt === 0 ? null : Math.max(0, Math.round(ttl - (now - lastAt) / 60000))
 
@@ -27,6 +36,55 @@ export const stamp = (ms: number): string =>
   new Date(ms).toISOString().slice(0, 16).replace(/[:T]/g, '-')
 
 export const k = (n: number): string => (n >= 1000 ? `${Math.round(n / 1000)}k` : String(n))
+
+export type Level = 'ok' | 'warn' | 'bad'
+
+/** Уровень значения: от warnAt — предупреждение, от badAt — тревога. */
+export const levelOf = (value: number, warnAt: number, badAt: number): Level =>
+  value >= badAt ? 'bad' : value >= warnAt ? 'warn' : 'ok'
+
+/** Цвет Text по уровню (ключи темы); ok — без цвета, серым. */
+export const levelColor = (level: Level): string | undefined =>
+  level === 'bad' ? 'error' : level === 'warn' ? 'warning' : undefined
+
+// Лимиты подписки (5h, week): жёлтым от 70%, красным от 90%.
+export const LIMIT_WARN = 70
+export const LIMIT_BAD = 90
+
+// Ниже этого размера контекста пересчёт кэша копеечный — подсказки не нужны.
+export const MIN_NOTE_TOKENS = 20000
+
+/**
+ * Одна строка под полосой: что сейчас важно знать про кэш. Нет записки — ничего.
+ *  - тяжёлый контекст (hint) — призыв сделать записку; при холодном кэше с ценой пересчёта;
+ *  - кэш холодный — «следующее сообщение пересоберёт ~N токенов»;
+ *  - кэш остынет в ближайшие `soon` минут — «жми H, пока он тёплый и это дёшево».
+ */
+export const bandNote = (a: {
+  warm: number | null
+  tokens: number
+  percent: number
+  soon: number
+  hint: boolean
+  urgentPercent: number
+  hasHandoff: boolean
+}): { text: string; level: Level } | null => {
+  if (a.hasHandoff) return null
+  const big = a.tokens >= MIN_NOTE_TOKENS
+  const cold = a.warm === 0
+  const cost = `your next message re-writes ~${k(a.tokens)} tokens`
+  if (a.hint) {
+    const level: Level = a.percent >= a.urgentPercent ? 'bad' : 'warn'
+    return cold && big
+      ? { text: `cache is cold: ${cost}. Press H for a handoff, then C to clear and continue`, level }
+      : { text: 'context is heavy: press H for a handoff, then C to clear and continue', level }
+  }
+  if (cold && big) return { text: `cache is cold: ${cost}`, level: 'ok' }
+  if (a.warm !== null && a.warm > 0 && a.warm <= a.soon && big) {
+    return { text: `cache cools in ${a.warm}m: press H now to save a handoff while it is warm`, level: 'warn' }
+  }
+  return null
+}
 
 const CYRILLIC = /[Ѐ-ӿ]/g
 const LETTER = /\p{L}/gu
