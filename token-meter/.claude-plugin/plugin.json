@@ -1,0 +1,1 @@
+{ "name": "token-meter", "version": "0.1.0", "description": "Status line with token usage per turn and per session, plus the Cyrillic share of your last prompt." }
