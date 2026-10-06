@@ -1,5 +1,5 @@
 import { test, expect } from 'claude-code/testing'
-import { HANDOFF_PROMPT, bandNote, handoffPrompt, levelColor, levelOf, withIgnore, cyrillicShare, needsHandoff, parseNext, stamp, warmMinutes } from './logic'
+import { HANDOFF_PROMPT, bandNote, gitSection, handoffPrompt, levelColor, levelOf, recallAt, rememberAt, withGit, withIgnore, cyrillicShare, needsHandoff, parseNext, stamp, warmMinutes } from './logic'
 
 test('warmMinutes', () => {
   expect(warmMinutes(0, 1000, 60)).toBe(null)
@@ -79,6 +79,41 @@ test('bandNote: тяжёлый контекст', () => {
 
 test('bandNote: записка уже есть — молчим', () => {
   expect(bandNote({ ...base, warm: 0, percent: 90, hint: true, hasHandoff: true })).toBeNull()
+})
+
+test('rememberAt / recallAt: тепло кэша по сессиям', () => {
+  expect(recallAt(undefined, 'a')).toBe(0)
+  expect(recallAt({ a: 5 }, 'a')).toBe(5)
+  expect(recallAt({ a: 'x' }, 'a')).toBe(0)
+  const m1 = rememberAt(undefined, 'a', 100)
+  expect(m1).toEqual({ a: 100 })
+  const m2 = rememberAt(m1, 'b', 200)
+  expect(recallAt(m2, 'a')).toBe(100)
+  expect(recallAt(m2, 'b')).toBe(200)
+  expect(rememberAt(m2, 'a', 300).a).toBe(300) // обновилась запись той же сессии
+  expect(Object.keys(rememberAt({ a: 1, b: 2, c: 3 }, 'd', 4, 2)).sort()).toEqual(['c', 'd']) // остаются самые свежие
+  expect(rememberAt({ bad: 'x', ok: 7 }, 'n', 8)).toEqual({ ok: 7, n: 8 }) // мусор в хранилище выбрасывается
+})
+
+test('gitSection', () => {
+  const status = '## main...origin/main [ahead 1]\n M app/a.ts\n?? new.txt\n'
+  const s = gitSection(status, 'abc1234 Fix thing\n')!
+  expect(s).toContain('## Repo state (auto, from git)')
+  expect(s).toContain('- Branch: main...origin/main [ahead 1]')
+  expect(s).toContain('- Last commit: abc1234 Fix thing')
+  expect(s).toContain('- Uncommitted: 2 files')
+  expect(s).toContain(' M app/a.ts')
+  expect(gitSection('## main\n', '')!).toContain('- Working tree clean')
+  expect(gitSection('## main\n', '')!).not.toContain('Last commit')
+  expect(gitSection('fatal: not a git repository', '')).toBeNull()
+  const many = '## main\n' + Array.from({ length: 35 }, (_, i) => ` M f${i}.ts`).join('\n')
+  expect(gitSection(many, '')!).toContain('… and 5 more')
+  expect(gitSection('## main\n M one.ts\n', '')!).toContain('- Uncommitted: 1 file\n')
+})
+
+test('withGit', () => {
+  expect(withGit('note\n\n', '## X')).toBe('note\n\n## X\n')
+  expect(withGit('note', null)).toBe('note')
 })
 
 test('stamp', () => {

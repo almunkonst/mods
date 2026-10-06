@@ -86,6 +86,46 @@ export const bandNote = (a: {
   return null
 }
 
+// ---- тепло кэша между сессиями -------------------------------------------------------------------
+// Кэш промпта живёт на стороне Anthropic и не зависит от того, закрыли ли вы Claude Code. Поэтому время последнего
+// ответа по каждой сессии лежит в $.store (переживает сессии); после --resume полоса берёт его оттуда, а не пишет «cache ?».
+export const KEEP_SESSIONS = 20
+
+export const rememberAt = (map: unknown, id: string, at: number, keep = KEEP_SESSIONS): Record<string, number> => {
+  const old = typeof map === 'object' && map !== null ? Object.entries(map as Record<string, unknown>) : []
+  const known = old.filter((p): p is [string, number] => typeof p[1] === 'number' && p[0] !== id)
+  return Object.fromEntries([...known, [id, at] as [string, number]].sort((a, b) => b[1] - a[1]).slice(0, keep))
+}
+
+export const recallAt = (map: unknown, id: string): number => {
+  const v = typeof map === 'object' && map !== null ? (map as Record<string, unknown>)[id] : undefined
+  return typeof v === 'number' ? v : 0
+}
+
+// ---- факты из git в записке ----------------------------------------------------------------------
+// Записку пишет модель по памяти; ветку, незакоммиченные файлы и последний коммит мод берёт из git сам.
+export const GIT_MAX_LINES = 30
+
+/** statusOut — вывод `git status --short --branch`, lastOut — `git log -1 --pretty=%h %s`. Не репозиторий — null. */
+export const gitSection = (statusOut: string, lastOut: string): string | null => {
+  const lines = statusOut.split(/\r?\n/).filter(l => l.trim() !== '')
+  const head = lines.find(l => l.startsWith('## '))
+  if (!head) return null
+  const files = lines.filter(l => !l.startsWith('## '))
+  const shown = files.slice(0, GIT_MAX_LINES)
+  const more = files.length - shown.length
+  const out = ['## Repo state (auto, from git)', `- Branch: ${head.slice(3)}`]
+  const last = lastOut.trim()
+  if (last) out.push(`- Last commit: ${last}`)
+  out.push(files.length ? `- Uncommitted: ${files.length} file${files.length === 1 ? '' : 's'}` : '- Working tree clean')
+  if (files.length) out.push('```', ...shown, ...(more > 0 ? [`… and ${more} more`] : []), '```')
+  return out.join('\n')
+}
+
+/** Записка модели + блок из git (если он есть). */
+export const withGit = (note: string, section: string | null): string =>
+  section ? `${note.trimEnd()}\n\n${section}\n` : note
+
 const CYRILLIC = /[Ѐ-ӿ]/g
 const LETTER = /\p{L}/gu
 

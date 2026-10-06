@@ -3,7 +3,7 @@ import type { EngineInterface as Engine, Register } from 'claude-code'
 
 import type { Snap } from '../types'
 import type { Level } from './logic'
-import { LIMIT_BAD, LIMIT_WARN, bandNote, cyrillicShare, handoffPrompt, k, levelColor, levelOf, needsHandoff, parseNext, stamp, withIgnore, warmMinutes } from './logic'
+import { LIMIT_BAD, LIMIT_WARN, bandNote, cyrillicShare, gitSection, handoffPrompt, k, levelColor, levelOf, needsHandoff, parseNext, recallAt, rememberAt, stamp, withGit, withIgnore, warmMinutes } from './logic'
 
 const snap = atom({ plugin: 'cache-keeper', key: 'snap' } as const, {
   lastAt: 0,
@@ -13,17 +13,40 @@ const snap = atom({ plugin: 'cache-keeper', key: 'snap' } as const, {
   share: 0,
 } as Snap)
 
+// Ветка, незакоммиченное и последний коммит — из git, а не из памяти модели. Не репозиторий или git не отвечает — без блока.
+async function gitFacts($: Engine): Promise<string | null> {
+  try {
+    const status = await $.process.run(['git', '-c', 'core.quotepath=off', 'status', '--short', '--branch'])
+    if (status.exitCode !== 0) return null
+    const last = await $.process.run(['git', 'log', '-1', '--pretty=%h %s'])
+    return gitSection(status.stdout, last.exitCode === 0 ? last.stdout : '')
+  } catch {
+    return null
+  }
+}
+
+// Время последнего ответа переживает сессии: после --resume кэш по часам ещё может быть тёплым.
+async function remember($: Engine, at: number) {
+  try {
+    const id = await $.session.id()
+    await $.store.set('warm', rememberAt(await $.store.get('warm'), id, at))
+  } catch {
+    /* хранилище недоступно — полоса просто не вспомнит тепло после перезапуска */
+  }
+}
+
 async function resume($: Engine, choice?: string) {
   const { handoff } = await read($, snap)
   if (!handoff) {
     $.ui.toast('cache-keeper: no handoff yet, press H first.')
     return
   }
+  const note = withGit(handoff.text, await gitFacts($)) // состояние репозитория на момент продолжения
   await $.command.run({ command: 'clear' })
   await update($, snap, (s: Snap) => ({ ...s, lastAt: 0 }))
   const start = choice ? `\n\nStart with: ${choice}` : ''
   void $.prompt.submit({
-    text: `Continue from this handoff note:\n\n${handoff.text}${start}`,
+    text: `Continue from this handoff note:\n\n${note}${start}`,
     asUser: true,
   })
 }
@@ -70,6 +93,18 @@ export const register: Register = (on, options) => {
       const now = await $.clock.now()
       await update($, snap, s => ({ ...s, now }))
     })
+    // продолжили сессию (--resume): вспоминаем, когда был последний ответ, — кэш по часам может быть ещё тёплым
+    try {
+      if ((await read($, snap)).lastAt === 0) {
+        const at = recallAt(await $.store.get('warm'), await $.session.id())
+        if (at > 0) {
+          const now = await $.clock.now()
+          await update($, snap, s => ({ ...s, lastAt: at, now }))
+        }
+      }
+    } catch {
+      /* нет сохранённого — остаётся «cache ?» до первого ответа */
+    }
     return next(e)
   })
 
@@ -96,7 +131,7 @@ export const register: Register = (on, options) => {
       if (isWaiting) {
         isWaiting = false
         const path = `.cache-keeper/handoffs/${stamp(now)}.md`
-        await $.fs.write(path, e.answer)
+        await $.fs.write(path, withGit(e.answer, await gitFacts($))) // в файле — записка модели + факты из git
         await ignoreInGit($)
         await update($, snap, s => ({
           ...s,
@@ -104,6 +139,7 @@ export const register: Register = (on, options) => {
           now,
           handoff: { path, text: e.answer, next: parseNext(e.answer) },
         }))
+        await remember($, now)
         $.ui.toast(`cache-keeper: handoff saved to ${path}. Press C or type /handoff continue.`)
       } else {
         const u = e.usage
@@ -119,6 +155,7 @@ export const register: Register = (on, options) => {
               }
             : s.last,
         }))
+        await remember($, now)
       }
     }
     return next(e)
