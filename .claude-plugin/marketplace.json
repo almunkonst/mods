@@ -1,6 +1,19 @@
 {
   "name": "mods",
   "description": "Mods for Claude Code",
-  "owner": { "name": "almunkonst" },
-  "plugins": [{ "name": "token-meter", "source": "./token-meter", "description": "Status line with token usage per turn and per session, plus the Cyrillic share of your last prompt." }]
+  "owner": {
+    "name": "almunkonst"
+  },
+  "plugins": [
+    {
+      "name": "token-meter",
+      "source": "./token-meter",
+      "description": "Status line with token usage per turn and per session, plus the Cyrillic share of your last prompt."
+    },
+    {
+      "name": "cache-keeper",
+      "source": "./cache-keeper",
+      "description": "Band with cache warmth, context size and limits; /handoff and clear-and-continue."
+    }
+  ]
 }
