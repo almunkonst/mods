@@ -3,7 +3,7 @@ import type { EngineInterface as Engine, Register } from 'claude-code'
 
 import type { Snap } from '../types'
 import type { Level } from './logic'
-import { LIMIT_BAD, LIMIT_WARN, NEXT_LABEL_MAX, bandNote, clip, cyrillicShare, gitSection, handoffPrompt, k, levelColor, levelOf, needsHandoff, parseNext, recallAt, rememberAt, stamp, withGit, withIgnore, warmMinutes } from './logic'
+import { LIMIT_BAD, LIMIT_WARN, NEXT_LABEL_MAX, bandNote, clip, cyrillicShare, gitSection, handoffPrompt, k, levelColor, levelOf, needsHandoff, parseNext, recallAt, rememberAt, staleHandoffs, stamp, withGit, withIgnore, warmMinutes } from './logic'
 
 const snap = atom({ plugin: 'cache-keeper', key: 'snap' } as const, {
   lastAt: 0,
@@ -22,6 +22,20 @@ async function gitFacts($: Engine): Promise<string | null> {
     return gitSection(status.stdout, last.exitCode === 0 ? last.stdout : '')
   } catch {
     return null
+  }
+}
+
+// Новая записка появилась — старые удаляются (остаётся `keep` самых новых). У $.fs нет удаления, поэтому системная команда:
+// del на Windows (путь с буквой диска), rm на остальных; в папке записок, по именам файлов без пробелов и кавычек.
+async function pruneHandoffs($: Engine, keep: number) {
+  try {
+    const dir = '.cache-keeper/handoffs'
+    const names = staleHandoffs(await $.fs.list(dir), keep)
+    if (!names.length) return
+    const isWindows = /^[A-Za-z]:[\\/]/.test(await $.session.cwd())
+    await $.process.run(isWindows ? ['cmd', '/c', 'del', '/q', ...names] : ['rm', '-f', '--', ...names], { cwd: dir })
+  } catch {
+    /* не получилось убрать старые — они просто остаются, новая записка уже сохранена */
   }
 }
 
@@ -85,6 +99,7 @@ export const register: Register = (on, options) => {
   const warnPercent = Number(options?.warnPercent ?? 60)
   const urgentPercent = Number(options?.urgentPercent ?? 80)
   const soonMinutes = Number(options?.soonMinutes ?? 10)
+  const keepHandoffs = Math.max(1, Number(options?.keepHandoffs ?? 1))
   let isWaiting = false
 
   on('session.start', async ($, e, next) => {
@@ -132,6 +147,7 @@ export const register: Register = (on, options) => {
         isWaiting = false
         const path = `.cache-keeper/handoffs/${stamp(now)}.md`
         await $.fs.write(path, withGit(e.answer, await gitFacts($))) // в файле — записка модели + факты из git
+        await pruneHandoffs($, keepHandoffs)
         await ignoreInGit($)
         await update($, snap, s => ({
           ...s,

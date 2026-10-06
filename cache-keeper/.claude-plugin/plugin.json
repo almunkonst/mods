@@ -1,6 +1,6 @@
 {
   "name": "cache-keeper",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "author": { "name": "almunkonst" },
   "description": "Band with cache warmth, context size, limits, last-turn tokens and Cyrillic share; /handoff saves a session note, 'clear and continue' resumes from it.",
   "types": "./types/index.d.ts",
@@ -22,6 +22,12 @@
       "title": "Warn before the cache cools (minutes)",
       "description": "This many minutes before the cache goes cold, suggest saving a handoff while it is still cheap.",
       "default": 10
+    },
+    "keepHandoffs": {
+      "type": "number",
+      "title": "Handoff notes to keep",
+      "description": "How many of the newest handoff notes stay in .cache-keeper/handoffs/; older ones are deleted when a new one is saved (at least 1).",
+      "default": 1
     },
     "urgentPercent": {
       "type": "number",

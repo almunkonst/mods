@@ -1,5 +1,5 @@
 import { test, expect } from 'claude-code/testing'
-import { HANDOFF_PROMPT, NEXT_LABEL_MAX, bandNote, clip, gitSection, handoffPrompt, levelColor, levelOf, recallAt, rememberAt, withGit, withIgnore, cyrillicShare, needsHandoff, parseNext, stamp, warmMinutes } from './logic'
+import { HANDOFF_PROMPT, NEXT_LABEL_MAX, bandNote, clip, gitSection, staleHandoffs, handoffPrompt, levelColor, levelOf, recallAt, rememberAt, withGit, withIgnore, cyrillicShare, needsHandoff, parseNext, stamp, warmMinutes } from './logic'
 
 test('warmMinutes', () => {
   expect(warmMinutes(0, 1000, 60)).toBe(null)
@@ -131,6 +131,21 @@ test('clip', () => {
   expect(long.length).toBeLessThanOrEqual(NEXT_LABEL_MAX)
   expect(long.endsWith('…')).toBe(true)
   expect(long.endsWith(' …')).toBe(false) // пробел перед многоточием убирается
+})
+
+test('staleHandoffs: старые записки к удалению', () => {
+  const files = [
+    { name: '2026-10-06-15-46.md', kind: 'file' },
+    { name: '2026-10-05-09-10.md', kind: 'file' },
+    { name: '2026-10-06-20-30.md', kind: 'file' },
+    { name: 'notes.md', kind: 'file' }, // чужой файл — не трогаем
+    { name: '2026-10-01-00-00.md', kind: 'dir' }, // не файл — не трогаем
+  ]
+  expect(staleHandoffs(files)).toEqual(['2026-10-06-15-46.md', '2026-10-05-09-10.md'])
+  expect(staleHandoffs(files, 2)).toEqual(['2026-10-05-09-10.md'])
+  expect(staleHandoffs(files, 0)).toEqual(['2026-10-06-15-46.md', '2026-10-05-09-10.md']) // меньше одной не оставляем
+  expect(staleHandoffs(files, 5)).toEqual([])
+  expect(staleHandoffs([])).toEqual([])
 })
 
 test('withGit', () => {
