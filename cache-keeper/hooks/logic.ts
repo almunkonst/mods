@@ -35,3 +35,12 @@ export const cyrillicShare = (text: string): number => {
   const letters = text.match(LETTER)?.length ?? 0
   return letters === 0 ? 0 : Math.round(((text.match(CYRILLIC)?.length ?? 0) / letters) * 100)
 }
+
+export const IGNORE_LINE = '.cache-keeper/'
+
+export const withIgnore = (content: string): string | null => {
+  const lines = content.split(/\r?\n/).map(x => x.trim())
+  if (lines.includes(IGNORE_LINE) || lines.includes('.cache-keeper')) return null
+  const sep = content === '' || content.endsWith('\n') ? '' : '\n'
+  return `${content}${sep}${IGNORE_LINE}\n`
+}
