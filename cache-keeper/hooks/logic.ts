@@ -5,13 +5,15 @@ export const HANDOFF_PROMPT = [
   'Reply with the note only.',
 ].join(' ')
 
-// Если человек пишет по-русски, записка тоже по-русски. Заголовки разделов остаются английскими:
-// по «Pick up here» parseNext находит шаги для кнопок 1–3.
+// Если человек пишет по-русски, записка тоже по-русски, и заголовки тоже. Раздел с шагами для кнопок 1–3
+// parseNext находит по любому из двух заголовков: «Pick up here» или «С чего продолжить».
 export const RU_THRESHOLD = 50
+
+export const RU_TITLES = ['Где начали', 'Решения и что сделано', 'Открытые вопросы', 'С чего продолжить'] as const
 
 export const handoffPrompt = (ruShare: number): string =>
   ruShare >= RU_THRESHOLD
-    ? `${HANDOFF_PROMPT} Keep the four section titles exactly as written above, in English; write everything under them in Russian.`
+    ? `${HANDOFF_PROMPT} Write the note in Russian and use exactly these four section titles instead of the English ones, in this order: ${RU_TITLES.map(t => `"${t}"`).join(', ')}.`
     : HANDOFF_PROMPT
 
 export const warmMinutes = (lastAt: number, now: number, ttl: number): number | null =>
@@ -25,7 +27,7 @@ export const needsHandoff = (
 ): boolean => percent >= urgentPercent || (warm === 0 && percent >= warnPercent)
 
 export const parseNext = (note: string): string[] => {
-  const at = note.search(/pick up here/i)
+  const at = note.search(/pick up here|с чего продолжить/i)
   const tail = at === -1 ? '' : note.slice(at)
   return [...tail.matchAll(/^\s*(?:\d+[.)]|[-*])\s+(.+)$/gm)]
     .map(m => m[1]!.trim())

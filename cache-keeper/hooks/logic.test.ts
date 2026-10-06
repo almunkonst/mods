@@ -27,13 +27,20 @@ test('parseNext: русские шаги под английским загол�
   expect(parseNext(note)).toEqual(['Проверить корзину', 'Выложить правки'])
 })
 
+test('parseNext: русский заголовок «С чего продолжить»', () => {
+  const note = '## Где начали\nтекст\n- пункт про другое\n## Открытые вопросы\n- вопрос\n## С чего продолжить\n1. Проверить корзину\n2. Выложить правки'
+  expect(parseNext(note)).toEqual(['Проверить корзину', 'Выложить правки'])
+  expect(parseNext('## с чего продолжить\n- один')).toEqual(['один']) // регистр не важен
+})
+
 test('handoffPrompt', () => {
   expect(handoffPrompt(0)).toBe(HANDOFF_PROMPT)
   expect(handoffPrompt(49)).toBe(HANDOFF_PROMPT)
   const ru = handoffPrompt(50)
   expect(ru.startsWith(HANDOFF_PROMPT)).toBe(true)
   expect(ru).toContain('Russian')
-  expect(ru).toContain('in English') // заголовки остаются английскими: по ним parseNext находит «Pick up here»
+  expect(ru).toContain('"С чего продолжить"') // по этому заголовку parseNext находит шаги для кнопок
+  expect(ru).toContain('"Где начали"')
 })
 
 test('levelOf / levelColor', () => {
