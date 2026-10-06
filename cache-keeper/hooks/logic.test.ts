@@ -1,5 +1,5 @@
 import { test, expect } from 'claude-code/testing'
-import { HANDOFF_PROMPT, bandNote, gitSection, handoffPrompt, levelColor, levelOf, recallAt, rememberAt, withGit, withIgnore, cyrillicShare, needsHandoff, parseNext, stamp, warmMinutes } from './logic'
+import { HANDOFF_PROMPT, NEXT_LABEL_MAX, bandNote, clip, gitSection, handoffPrompt, levelColor, levelOf, recallAt, rememberAt, withGit, withIgnore, cyrillicShare, needsHandoff, parseNext, stamp, warmMinutes } from './logic'
 
 test('warmMinutes', () => {
   expect(warmMinutes(0, 1000, 60)).toBe(null)
@@ -109,6 +109,21 @@ test('gitSection', () => {
   const many = '## main\n' + Array.from({ length: 35 }, (_, i) => ` M f${i}.ts`).join('\n')
   expect(gitSection(many, '')!).toContain('… and 5 more')
   expect(gitSection('## main\n M one.ts\n', '')!).toContain('- Uncommitted: 1 file\n')
+})
+
+test('gitSection: BOM в сообщении коммита не выводится', () => {
+  const s = gitSection('## main\n', '1706f99 ﻿Корзина: правка\n')!
+  expect(s).toContain('- Last commit: 1706f99 Корзина: правка')
+  expect(s.includes('﻿')).toBe(false)
+})
+
+test('clip', () => {
+  expect(clip('коротко')).toBe('коротко')
+  expect(clip('x'.repeat(NEXT_LABEL_MAX))).toBe('x'.repeat(NEXT_LABEL_MAX)) // ровно по границе — не режем
+  const long = clip('слово '.repeat(30))
+  expect(long.length).toBeLessThanOrEqual(NEXT_LABEL_MAX)
+  expect(long.endsWith('…')).toBe(true)
+  expect(long.endsWith(' …')).toBe(false) // пробел перед многоточием убирается
 })
 
 test('withGit', () => {

@@ -3,7 +3,7 @@ import type { EngineInterface as Engine, Register } from 'claude-code'
 
 import type { Snap } from '../types'
 import type { Level } from './logic'
-import { LIMIT_BAD, LIMIT_WARN, bandNote, cyrillicShare, gitSection, handoffPrompt, k, levelColor, levelOf, needsHandoff, parseNext, recallAt, rememberAt, stamp, withGit, withIgnore, warmMinutes } from './logic'
+import { LIMIT_BAD, LIMIT_WARN, NEXT_LABEL_MAX, bandNote, clip, cyrillicShare, gitSection, handoffPrompt, k, levelColor, levelOf, needsHandoff, parseNext, recallAt, rememberAt, stamp, withGit, withIgnore, warmMinutes } from './logic'
 
 const snap = atom({ plugin: 'cache-keeper', key: 'snap' } as const, {
   lastAt: 0,
@@ -186,23 +186,27 @@ export const register: Register = (on, options) => {
     if (usage.cost) parts.push({ t: ` | ≈$${usage.cost.usd.toFixed(2)}`, level: 'ok' })
     if (s.last) parts.push({ t: ` | in ${k(s.last.input)} out ${k(s.last.output)} cached ${k(s.last.cached)}`, level: 'ok' })
     if (s.share > 0) parts.push({ t: ` | RU ${s.share}%`, level: 'ok' })
-    parts.push({ t: ' ', level: 'ok' })
 
+    // Кнопки — отдельной строкой над текстом полосы: справа от длинной строки им не хватало места, и текст переносился.
+    // Длинный шаг из записки обрезан на кнопке; по наведению над ним всплывает карточка с полным текстом
+    // (скрытый Box position=absolute с hover display=flex внутри Box с key; светлый текст на тёмном фоне — читается в любой теме).
     return (
       <Box flexDirection="column">
         <Box>
-          <Text>
-            {parts.map((p, i) => (
-              <Text key={`p${i}`} color={p.color ?? levelColor(p.level)} dimColor={!p.color && p.level === 'ok'}>
-                {p.t}
-              </Text>
-            ))}
-          </Text>
-          <Button key="handoff" hotkey="h" label="handoff" onPress={() => ask($, () => { isWaiting = true })} />
+          <Box marginRight={1}>
+            <Button key="handoff" hotkey="h" label="handoff" onPress={() => ask($, () => { isWaiting = true })} />
+          </Box>
           {s.handoff && (
             <Button key="clear" hotkey="c" label="clear and continue" onPress={() => resume($)} />
           )}
         </Box>
+        <Text>
+          {parts.map((p, i) => (
+            <Text key={`p${i}`} color={p.color ?? levelColor(p.level)} dimColor={!p.color && p.level === 'ok'}>
+              {p.t}
+            </Text>
+          ))}
+        </Text>
         {note && (
           <Text color={levelColor(note.level)} dimColor={note.level === 'ok'}>{note.text}</Text>
         )}
@@ -210,7 +214,25 @@ export const register: Register = (on, options) => {
           <Box flexDirection="column">
             <Text dimColor>next:</Text>
             {s.handoff.next.map((line, i) => (
-              <Button key={`n${i}`} hotkey={String(i + 1)} label={line} onPress={() => resume($, line)} />
+              <Box key={`nb${i}`}>
+                <Button key={`n${i}`} hotkey={String(i + 1)} label={clip(line)} onPress={() => resume($, line)} />
+                {line.length > NEXT_LABEL_MAX && (
+                  <Box
+                    position="absolute"
+                    bottom={1}
+                    left={0}
+                    right={0}
+                    display="none"
+                    hover={{ display: 'flex' }}
+                    borderStyle="round"
+                    borderColor="#6b6b6b"
+                    backgroundColor="#262626"
+                    paddingX={1}
+                  >
+                    <Text color="#f0f0f0">{line}</Text>
+                  </Box>
+                )}
+              </Box>
             ))}
           </Box>
         )}

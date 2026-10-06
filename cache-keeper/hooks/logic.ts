@@ -37,6 +37,12 @@ export const stamp = (ms: number): string =>
 
 export const k = (n: number): string => (n >= 1000 ? `${Math.round(n / 1000)}k` : String(n))
 
+// Длинный шаг из записки на кнопке обрезается, а полный текст показывает карточка по наведению.
+export const NEXT_LABEL_MAX = 70
+
+export const clip = (text: string, max = NEXT_LABEL_MAX): string =>
+  text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text
+
 export type Level = 'ok' | 'warn' | 'bad'
 
 /** Уровень значения: от warnAt — предупреждение, от badAt — тревога. */
@@ -115,7 +121,8 @@ export const gitSection = (statusOut: string, lastOut: string): string | null =>
   const shown = files.slice(0, GIT_MAX_LINES)
   const more = files.length - shown.length
   const out = ['## Repo state (auto, from git)', `- Branch: ${head.slice(3)}`]
-  const last = lastOut.trim()
+  // невидимая метка начала файла (BOM) в сообщении коммита выводилась бы как «�»
+  const last = lastOut.replace(/﻿/g, '').trim()
   if (last) out.push(`- Last commit: ${last}`)
   out.push(files.length ? `- Uncommitted: ${files.length} file${files.length === 1 ? '' : 's'}` : '- Working tree clean')
   if (files.length) out.push('```', ...shown, ...(more > 0 ? [`… and ${more} more`] : []), '```')
