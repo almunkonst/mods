@@ -1,5 +1,5 @@
 import { test, expect } from 'claude-code/testing'
-import { cyrillicShare, needsHandoff, parseNext, stamp, warmMinutes } from './logic'
+import { withIgnore, cyrillicShare, needsHandoff, parseNext, stamp, warmMinutes } from './logic'
 
 test('warmMinutes', () => {
   expect(warmMinutes(0, 1000, 60)).toBe(null)
@@ -31,4 +31,12 @@ test('cyrillicShare', () => {
   expect(cyrillicShare('привет')).toBe(100)
   expect(cyrillicShare('привет hi')).toBe(75)
   expect(cyrillicShare('123')).toBe(0)
+})
+
+test('withIgnore', () => {
+  expect(withIgnore('')).toBe('.cache-keeper/\n')
+  expect(withIgnore('node_modules/\n')).toBe('node_modules/\n.cache-keeper/\n')
+  expect(withIgnore('node_modules/')).toBe('node_modules/\n.cache-keeper/\n')
+  expect(withIgnore('a\n.cache-keeper/\n')).toBeNull()
+  expect(withIgnore('a\r\n.cache-keeper\r\n')).toBeNull()
 })

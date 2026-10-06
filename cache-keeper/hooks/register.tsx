@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, Register } from 'claude-code'
 
 import type { Snap } from '../types'
-import { HANDOFF_PROMPT, cyrillicShare, k, needsHandoff, parseNext, stamp, warmMinutes } from './logic'
+import { HANDOFF_PROMPT, cyrillicShare, k, needsHandoff, parseNext, stamp, withIgnore, warmMinutes } from './logic'
 
 const snap = atom({ plugin: 'cache-keeper', key: 'snap' } as const, {
   lastAt: 0,
@@ -25,6 +25,13 @@ async function resume($: Engine, choice?: string) {
     text: `Continue from this handoff note:\n\n${handoff.text}${start}`,
     asUser: true,
   })
+}
+
+async function ignoreInGit($: Engine) {
+  if (!(await $.fs.exists('.git'))) return
+  const current = (await $.fs.exists('.gitignore')) ? await $.fs.read('.gitignore') : ''
+  const next = withIgnore(current)
+  if (next !== null) await $.fs.write('.gitignore', next)
 }
 
 async function ask($: Engine, setWaiting: () => void) {
@@ -72,6 +79,7 @@ export const register: Register = (on, options) => {
         isWaiting = false
         const path = `.cache-keeper/handoffs/${stamp(now)}.md`
         await $.fs.write(path, e.answer)
+        await ignoreInGit($)
         await update($, snap, s => ({
           ...s,
           lastAt: now,
