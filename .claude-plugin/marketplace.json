@@ -6,14 +6,9 @@
   },
   "plugins": [
     {
-      "name": "token-meter",
-      "source": "./token-meter",
-      "description": "Status line with token usage per turn and per session, plus the Cyrillic share of your last prompt."
-    },
-    {
       "name": "cache-keeper",
       "source": "./cache-keeper",
-      "description": "Band with cache warmth, context size and limits; /handoff and clear-and-continue."
+      "description": "Band with cache warmth, context size, limits, last-turn tokens and Cyrillic share; /handoff and clear-and-continue."
     }
   ]
 }

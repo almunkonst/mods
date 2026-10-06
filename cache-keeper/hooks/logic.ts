@@ -27,3 +27,11 @@ export const stamp = (ms: number): string =>
   new Date(ms).toISOString().slice(0, 16).replace(/[:T]/g, '-')
 
 export const k = (n: number): string => (n >= 1000 ? `${Math.round(n / 1000)}k` : String(n))
+
+const CYRILLIC = /[Ѐ-ӿ]/g
+const LETTER = /\p{L}/gu
+
+export const cyrillicShare = (text: string): number => {
+  const letters = text.match(LETTER)?.length ?? 0
+  return letters === 0 ? 0 : Math.round(((text.match(CYRILLIC)?.length ?? 0) / letters) * 100)
+}

@@ -1,5 +1,5 @@
 import { test, expect } from 'claude-code/testing'
-import { needsHandoff, parseNext, stamp, warmMinutes } from './logic'
+import { cyrillicShare, needsHandoff, parseNext, stamp, warmMinutes } from './logic'
 
 test('warmMinutes', () => {
   expect(warmMinutes(0, 1000, 60)).toBe(0)
@@ -22,4 +22,11 @@ test('parseNext', () => {
 
 test('stamp', () => {
   expect(stamp(Date.UTC(2026, 9, 6, 15, 46))).toBe('2026-10-06-15-46')
+})
+
+test('cyrillicShare', () => {
+  expect(cyrillicShare('hello')).toBe(0)
+  expect(cyrillicShare('привет')).toBe(100)
+  expect(cyrillicShare('привет hi')).toBe(75)
+  expect(cyrillicShare('123')).toBe(0)
 })

@@ -2,12 +2,14 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, Register } from 'claude-code'
 
 import type { Snap } from '../types'
-import { HANDOFF_PROMPT, k, needsHandoff, parseNext, stamp, warmMinutes } from './logic'
+import { HANDOFF_PROMPT, cyrillicShare, k, needsHandoff, parseNext, stamp, warmMinutes } from './logic'
 
 const snap = atom({ plugin: 'cache-keeper', key: 'snap' } as const, {
   lastAt: 0,
   now: 0,
   handoff: null,
+  last: null,
+  share: 0,
 } as Snap)
 
 async function resume($: Engine, choice?: string) {
@@ -46,6 +48,14 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
+  on('prompt.submit', async ($, e, next) => {
+    if (e.origin.kind !== 'plugin') {
+      const share = cyrillicShare(e.text)
+      await update($, snap, s => ({ ...s, share }))
+    }
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
   on('command.run', { command: 'handoff' }, async ($, e) => {
     if (e.args.trim() === 'continue') {
       await resume($)
@@ -70,7 +80,19 @@ export const register: Register = (on, options) => {
         }))
         $.ui.toast(`cache-keeper: handoff saved to ${path}. Press C or type /handoff continue.`)
       } else {
-        await update($, snap, s => ({ ...s, lastAt: now, now }))
+        const u = e.usage
+        await update($, snap, s => ({
+          ...s,
+          lastAt: now,
+          now,
+          last: u
+            ? {
+                input: u.input_tokens + u.cache_creation_input_tokens,
+                output: u.output_tokens,
+                cached: u.cache_read_input_tokens,
+              }
+            : s.last,
+        }))
       }
     }
     return next(e)
@@ -97,7 +119,9 @@ export const register: Register = (on, options) => {
           <Text dimColor>
             {` | ctx ${k(usage.context.tokens ?? 0)} (${Math.round(percent)}%)`}
             {limits ? ` | ${limits}` : ''}
-            {usage.cost ? ` | session $${usage.cost.usd.toFixed(2)}` : ''}{' '}
+            {usage.cost ? ` | session $${usage.cost.usd.toFixed(2)}` : ''}
+            {s.last ? ` | last in ${k(s.last.input)} out ${k(s.last.output)} cached ${k(s.last.cached)}` : ''}
+            {s.share > 0 ? ` | RU ${s.share}%` : ''}{' '}
           </Text>
           <Button key="handoff" hotkey="h" label="handoff" onPress={() => ask($, () => { isWaiting = true })} />
           {s.handoff && (
