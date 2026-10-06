@@ -190,6 +190,7 @@ export const register: Register = (on, options) => {
     // Кнопки — отдельной строкой над текстом полосы: справа от длинной строки им не хватало места, и текст переносился.
     // Длинный шаг из записки обрезан на кнопке; по наведению над ним всплывает карточка с полным текстом
     // (скрытый Box position=absolute с hover display=flex внутри Box с key; светлый текст на тёмном фоне — читается в любой теме).
+    // Box с key растянут на всю ширину полосы (width 100%): карточка берёт ширину родителя, а без этого была шириной в кнопку и росла вверх.
     return (
       <Box flexDirection="column">
         <Box>
@@ -214,7 +215,7 @@ export const register: Register = (on, options) => {
           <Box flexDirection="column">
             <Text dimColor>next:</Text>
             {s.handoff.next.map((line, i) => (
-              <Box key={`nb${i}`}>
+              <Box key={`nb${i}`} width="100%">
                 <Button key={`n${i}`} hotkey={String(i + 1)} label={clip(line)} onPress={() => resume($, line)} />
                 {line.length > NEXT_LABEL_MAX && (
                   <Box

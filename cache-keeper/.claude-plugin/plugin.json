@@ -1,6 +1,7 @@
 {
   "name": "cache-keeper",
-  "version": "0.3.2",
+  "version": "0.3.3",
+  "author": { "name": "almunkonst" },
   "description": "Band with cache warmth, context size, limits, last-turn tokens and Cyrillic share; /handoff saves a session note, 'clear and continue' resumes from it.",
   "types": "./types/index.d.ts",
   "userConfig": {

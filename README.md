@@ -25,6 +25,11 @@
 
 Настройки: `ttlMinutes` (60), `soonMinutes` (10), `warnPercent` (60), `urgentPercent` (80).
 
+Установка (в Claude Code, две команды):
+
 ```
-/plugin install cache-keeper --marketplace almunkonst/mods
+/plugin marketplace add almunkonst/mods
+/plugin install cache-keeper@mods
 ```
+
+То же из терминала: `claude plugin marketplace add almunkonst/mods`, затем `claude plugin install cache-keeper@mods` (настройки можно сразу задать флагом, например `--config soonMinutes=15`). После установки или обновления — `/reload-plugins`.
