@@ -113,13 +113,13 @@ export const register: Register = (on, options) => {
     return (
       <Box flexDirection="column">
         <Box>
-          <Text color={warm > 0 ? 'green' : undefined} dimColor={warm === 0}>
-            {warm > 0 ? `cache warm ${warm}m` : 'cache cold'}
+          <Text color={warm !== null && warm > 0 ? 'green' : undefined} dimColor={warm === null || warm === 0}>
+            {warm === null ? 'cache ?' : warm > 0 ? `cache warm ${warm}m` : 'cache cold'}
           </Text>
           <Text dimColor>
             {` | ctx ${k(usage.context.tokens ?? 0)} (${Math.round(percent)}%)`}
             {limits ? ` | ${limits}` : ''}
-            {usage.cost ? ` | session $${usage.cost.usd.toFixed(2)}` : ''}
+            {usage.cost ? ` | session $${usage.cost.usd.toFixed(2)} (API-equiv)` : ''}
             {s.last ? ` | last in ${k(s.last.input)} out ${k(s.last.output)} cached ${k(s.last.cached)}` : ''}
             {s.share > 0 ? ` | RU ${s.share}%` : ''}{' '}
           </Text>

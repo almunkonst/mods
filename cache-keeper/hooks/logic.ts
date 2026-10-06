@@ -5,12 +5,12 @@ export const HANDOFF_PROMPT = [
   'Reply with the note only.',
 ].join(' ')
 
-export const warmMinutes = (lastAt: number, now: number, ttl: number): number =>
-  lastAt === 0 ? 0 : Math.max(0, Math.round(ttl - (now - lastAt) / 60000))
+export const warmMinutes = (lastAt: number, now: number, ttl: number): number | null =>
+  lastAt === 0 ? null : Math.max(0, Math.round(ttl - (now - lastAt) / 60000))
 
 export const needsHandoff = (
   percent: number,
-  warm: number,
+  warm: number | null,
   warnPercent: number,
   urgentPercent: number,
 ): boolean => percent >= urgentPercent || (warm === 0 && percent >= warnPercent)
