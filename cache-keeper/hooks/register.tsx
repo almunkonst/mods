@@ -190,8 +190,9 @@ export const register: Register = (on, options) => {
     // Кнопки — отдельной строкой над текстом полосы: справа от длинной строки им не хватало места, и текст переносился.
     // Длинный шаг из записки обрезан на кнопке; по наведению над ним всплывает карточка с полным текстом
     // (скрытый Box position=absolute с hover display=flex внутри Box с key; светлый текст на тёмном фоне — читается в любой теме).
-    // Блок «next» и Box с key растянуты на всю ширину полосы (width 100%): карточка берёт ширину родителя,
-    // а без этого была шириной в самую длинную кнопку и росла вверх.
+    // Ширина карточки — в символах по ширине полосы (e.props.bodyColumns минус поля): проценты и left/right приложение
+    // считает от самой кнопки, и карточка получалась узкой и высокой.
+    const cardWidth = Math.max(40, (e.props.bodyColumns || 80) - 6)
     return (
       <Box flexDirection="column">
         <Box>
@@ -237,7 +238,7 @@ export const register: Register = (on, options) => {
                     position="absolute"
                     bottom={1}
                     left={0}
-                    right={0}
+                    width={cardWidth}
                     display="none"
                     hover={{ display: 'flex' }}
                     borderStyle="round"
