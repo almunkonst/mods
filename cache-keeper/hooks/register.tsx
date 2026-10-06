@@ -190,7 +190,8 @@ export const register: Register = (on, options) => {
     // Кнопки — отдельной строкой над текстом полосы: справа от длинной строки им не хватало места, и текст переносился.
     // Длинный шаг из записки обрезан на кнопке; по наведению над ним всплывает карточка с полным текстом
     // (скрытый Box position=absolute с hover display=flex внутри Box с key; светлый текст на тёмном фоне — читается в любой теме).
-    // Box с key растянут на всю ширину полосы (width 100%): карточка берёт ширину родителя, а без этого была шириной в кнопку и росла вверх.
+    // Блок «next» и Box с key растянуты на всю ширину полосы (width 100%): карточка берёт ширину родителя,
+    // а без этого была шириной в самую длинную кнопку и росла вверх.
     return (
       <Box flexDirection="column">
         <Box>
@@ -212,11 +213,25 @@ export const register: Register = (on, options) => {
           <Text color={levelColor(note.level)} dimColor={note.level === 'ok'}>{note.text}</Text>
         )}
         {s.handoff && s.handoff.next.length > 0 && (
-          <Box flexDirection="column">
+          <Box flexDirection="column" width="100%">
             <Text dimColor>next:</Text>
+            {/* пункты разведены пустой строкой (gap). Номер слева: в терминале это plain-кнопка («1: текст»), а приложение
+                рисует свою кнопку и plain не учитывает — там номер отдельным значком слева, цифровая клавиша не привязана (только клик). */}
+            <Box flexDirection="column" width="100%" gap={1}>
             {s.handoff.next.map((line, i) => (
               <Box key={`nb${i}`} width="100%">
-                <Button key={`n${i}`} hotkey={String(i + 1)} label={clip(line)} onPress={() => resume($, line)} />
+                {e.surface !== 'terminal' && (
+                  <Box marginRight={1}>
+                    <Text dimColor>{`${i + 1}.`}</Text>
+                  </Box>
+                )}
+                <Button
+                  key={`n${i}`}
+                  hotkey={e.surface === 'terminal' ? String(i + 1) : undefined}
+                  plain={e.surface === 'terminal' ? true : undefined}
+                  label={clip(line)}
+                  onPress={() => resume($, line)}
+                />
                 {line.length > NEXT_LABEL_MAX && (
                   <Box
                     position="absolute"
@@ -235,6 +250,7 @@ export const register: Register = (on, options) => {
                 )}
               </Box>
             ))}
+            </Box>
           </Box>
         )}
       </Box>
